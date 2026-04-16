@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import it.marconi.biblioteca.domain.Autore;
@@ -33,13 +34,17 @@ public class LibroService {
         return libroRepo.findById(isbn).map(mapper::toDto);
     } 
 
-    public LibroDTO save(LibroDTO libro){
-        Autore autore =autoreRepo.findById(libro.autore()).orElseThrow(
-            ()->new RuntimeException("Autore non trovato"));
+    public Optional<LibroDTO> save(LibroDTO libro){
+        Optional<Autore> autore =autoreRepo.findById(libro.autore());
+        
+        if (autore.isPresent()){
+            Autore a = autore.get();
+            Libro entity = mapper.toEntity(libro, a);
 
-        Libro entity = mapper.toEntity(libro, autore);
-
-        return mapper.toDto(libroRepo.save(entity));
+            return Optional.of(mapper.toDto(libroRepo.save(entity)));
+        }
+        else
+            return Optional.empty();
     }
 
     public Optional<LibroDTO> getByTitolo (String titolo){
@@ -51,5 +56,13 @@ public class LibroService {
     //ricerca del titolo per autoreId (query custom)
     public List<LibroDTO> getByAutoreId(int autoreId){
         return libroRepo.findByAutoreId(autoreId).stream().map(mapper::toDto).toList();
+    }
+
+    public boolean deleteByIsbn(String isbn){
+     if (libroRepo.existsById(isbn)){
+            libroRepo.deleteById(isbn);
+            return true;
+        }else
+            return false;
     }
 }

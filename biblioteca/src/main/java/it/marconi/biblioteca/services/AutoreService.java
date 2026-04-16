@@ -36,4 +36,13 @@ public class AutoreService {
     public Optional<AutoreDTO> getById(int id){
         return autoreRepo.findById(id).map(mapper::toDto); //ALTRO MODO PER SCRIVERE LANDA FUNCTION 
     }
+
+    public boolean deleteById(int id){
+        if (autoreRepo.existsById(id)){
+            autoreRepo.deleteById(id);
+            return true;
+        }else
+            return false;
+            
+    }
 }
