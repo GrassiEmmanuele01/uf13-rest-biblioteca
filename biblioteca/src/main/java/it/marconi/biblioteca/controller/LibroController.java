@@ -4,15 +4,18 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import io.swagger.v3.oas.annotations.Operation;
 import it.marconi.biblioteca.domain.LibroDTO;
+import it.marconi.biblioteca.domain.response.APIResponse;
 import it.marconi.biblioteca.services.LibroService;
 import jakarta.validation.Valid;
 
@@ -25,36 +28,43 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 @RequestMapping("/libri")
 public class LibroController {
+    private final LibroService libroService;
 
     @Autowired
-    LibroService libroService;
+    public LibroController(LibroService libroService){
+        this.libroService=libroService;
+    }
 
     @GetMapping("/")
     @Operation(summary="Recupera tutti i libri")
-    public List<LibroDTO> getAll(){
-        return libroService.findAll();
+    public APIResponse<List<LibroDTO>> getAll(){
+        // return libroService.findAll();
+        List<LibroDTO> listaLibri = libroService.findAll();
+        return APIResponse.success(listaLibri);
+
     }
 
     @GetMapping("/{id}")
     @Operation(summary="Cerca un libro in base al campo isbn")
-    public ResponseEntity<LibroDTO> getLibroByIsbn(@PathVariable String isbn){
+    public APIResponse<LibroDTO> getLibroByIsbn(@PathVariable String isbn){
         Optional<LibroDTO> libro = libroService.getByIsbn(isbn);
 
-        if (libro.isPresent())
-            return ResponseEntity.of(libro);
-        else
-            return ResponseEntity.notFound().build();
+        return libro.map(APIResponse::success).orElseThrow(()->
+        new ResponseStatusException(
+            HttpStatus.NOT_FOUND,"Libro non trovato per ISBN"
+        ));
     }
 
     @GetMapping("/libro")
     @Operation(summary="Cerca un libro in base al titolo")
-    public ResponseEntity<LibroDTO> getLibroByTitolo (@RequestParam("titolo") String titolo){
+    public APIResponse<LibroDTO> getLibroByTitolo (@RequestParam("titolo") String titolo){
         Optional<LibroDTO> libro = libroService.getByTitolo(titolo);
-        
-        if (libro.isPresent())
-            return ResponseEntity.of(libro);
-        else
-            return ResponseEntity.notFound().build();
+        // throw new Exception("Si è rotto qualcosa",)
+
+        return libro.map(APIResponse::success).orElseThrow(()->
+        new ResponseStatusException(
+            HttpStatus.NOT_FOUND,"Libro non trovato per titolo"
+        ));
     }
 
 
@@ -75,7 +85,7 @@ public class LibroController {
         boolean deleted = libroService.deleteByIsbn(isbn);
 
         return deleted ?
-            ResponseEntity.ok("Libro eliminato con successo") :
+            ResponseEntity.noContent().build() :
             ResponseEntity.notFound().build();
     }
 }   
